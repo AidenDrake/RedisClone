@@ -1,3 +1,6 @@
-namespace StringParserNS;
+namespace RedisClone;
 
-public record ParsedMessage(string raw, int length);
+public record ParsedMessage(byte[] Raw)
+{
+    public record SimpleStringMessage(string? Value, byte[] Raw): ParsedMessage(Raw);
+}
