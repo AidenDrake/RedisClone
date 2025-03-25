@@ -6,17 +6,19 @@ Console.WriteLine("Hello world");
 
 namespace RedisClone
 {
+
     public class MessageParser // Let the kingdom of nouns hereby be established
     {
-        public ParsedMessage? Parse(byte[] bytes)
+        public record ParserResponse(ParsedMessage? ParsedMessage, byte[] UnparsedRemainder);
+
+        public ParserResponse Parse(byte[] bytes)
         {
-
-            var plusIndex = Array.IndexOf(bytes, (byte) '+');
-            // from this index we need to find a /r/n
-            if (plusIndex == -1) return null;
-
+            if (bytes[0] != (byte) '+')
+            {
+                return new ParserResponse(null, bytes);
+            }
             var carriageIndex = -1;
-            for (var i = plusIndex + 1; i < bytes.Length - 1; i++)
+            for (var i = 1; i < bytes.Length - 1; i++)
             {
                 var cur = bytes[i];
                 if (cur == '\r' && bytes[i + 1] == '\n')
@@ -25,13 +27,13 @@ namespace RedisClone
                 }
             }
 
-            if (carriageIndex == -1) return null;
+            if (carriageIndex == -1) return new ParserResponse(null, bytes);
 
-            var slice = bytes[(plusIndex + 1)..carriageIndex];
+            var slice = bytes[1..carriageIndex];
 
-            var bob = Encoding.ASCII.GetString(slice);
+            var stringySlice = Encoding.ASCII.GetString(slice);
 
-            return new ParsedMessage.SimpleStringMessage(bob, slice);
+            return new ParserResponse( new ParsedMessage.SimpleStringMessage(stringySlice, slice), bytes[(carriageIndex+1)..]);
         }
     }
 }

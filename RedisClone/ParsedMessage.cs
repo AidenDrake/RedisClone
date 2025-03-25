@@ -1,6 +1,6 @@
 namespace RedisClone;
 
-public record ParsedMessage(byte[] Raw)
+public record ParsedMessage(byte[] RawThatWasParsed)
 {
-    public record SimpleStringMessage(string? Value, byte[] Raw): ParsedMessage(Raw);
+    public record SimpleStringMessage(string? Value, byte[] RawThatWasParsed): ParsedMessage(RawThatWasParsed);
 }
