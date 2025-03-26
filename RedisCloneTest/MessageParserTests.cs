@@ -17,6 +17,7 @@ namespace RedisCloneTest;
 /*
  * So that the Parser does not hold state, I'm going to make the following assumptions about its input:
  * - The input always begins with a type indicator message or it is unparsable
+ *  - the input is non-empty
  *
  * The parser will need to return the unparsed portion of its message
  */
@@ -32,9 +33,6 @@ public class Tests
         _parser = new MessageParser();
     }
 
-
-
-
     // No nothing
     [TestCase("f")]
     // No carriage return
@@ -48,19 +46,23 @@ public class Tests
         var parser = new MessageParser();
         var message = Encoding.ASCII.GetBytes(input);
         var parsedMessage = parser.Parse(message);
-        Assert.That(parsedMessage?.ParsedMessage, Is.Null);
+        Assert.That(parsedMessage.ParsedMessage, Is.Null);
     }
 
     // Parse simple string
-    [TestCase("+OK\r\n", "OK", "OK")]
-    [TestCase("+BOB\r\n", "BOB", "BOB")]
-    public void SimpleString(string input, string expectedString, string expectedByteArrayString)
+    [TestCase("+OK\r\n", "OK", "")]
+    [TestCase("+BOB\r\n", "BOB", "")]
+
+    // Return non parsed portion of string
+    [TestCase("+OK\r\n+A", "OK", "+A")]
+    public void SimpleString(string input, string expectedString, string expectedNonParsedString)
     {
         var message = Encoding.ASCII.GetBytes(input);
-        var parsedMessage = _parser.Parse(message);
-        var expectedByteArray = Encoding.ASCII.GetBytes(expectedByteArrayString);
+        var parserResponse = _parser.Parse(message);
+        var expectedByteArray = Encoding.ASCII.GetBytes(expectedString);
+        var expectedNonParsedByteArray = Encoding.ASCII.GetBytes(expectedNonParsedString);
 
-        if (parsedMessage.ParsedMessage is not ParsedMessage.SimpleStringMessage ssm)
+        if (parserResponse.ParsedMessage is not ParsedMessage.SimpleStringMessage ssm)
         {
             Assert.Fail();
             return;
@@ -70,22 +72,40 @@ public class Tests
         {
             Assert.That(ssm.Value, Is.EqualTo(expectedString));
             Assert.That(ssm.RawThatWasParsed, Is.EquivalentTo(expectedByteArray));
+            Assert.That(parserResponse.UnparsedRemainder, Is.EquivalentTo(expectedNonParsedByteArray));
         });
     }
+
+
     // Parse Errors
     [Test]
     public void ErrorsAreNotSimpleStrings()
     {
         var message = Encoding.ASCII.GetBytes("-Error message\r\n");
         var parsedMessage = _parser.Parse(message);
-        Assert.That(parsedMessage.ParsedMessage is ParsedMessage.SimpleStringMessage ssm);
+        Assert.That(parsedMessage.ParsedMessage is not ParsedMessage.SimpleStringMessage);
     }
 
-    // Return non parsed portion of string
-
-    // Parse Null Strings
+    [Test]
+    public void ErrorsAreErrors()
+    {
+        var message = Encoding.ASCII.GetBytes("-Error message\r\n");
+        var parsedMessage = _parser.Parse(message);
+        Assert.That(parsedMessage.ParsedMessage is ParsedMessage.ErrorMessage);
+    }
+    // Check error messages
 
     // Parse Integers
+    [Test]
+    public void IntegersAreIntegers()
+    {
+        var message = Encoding.ASCII.GetBytes(":42\r\n");
+        var parsedMessage = _parser.Parse(message);
+        Assert.That(parsedMessage.ParsedMessage is ParsedMessage.IntegerMessage);
+    }
+
+
+    // Parse Null Strings
 
     // Parse Bulk Strings
 
