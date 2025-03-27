@@ -42,22 +42,20 @@ namespace RedisClone
             if (carriageIndex == -1) return new ParserResponse(null, bytes);
 
 
-            var slice = bytes[1..carriageIndex];
+            var abc = bytes[1..carriageIndex];
 
-            var stringifiedSlice = Encoding.ASCII.GetString(slice);
+            var stringifiedSlice = Encoding.ASCII.GetString(abc);
 
             var remainder = bytes[(carriageIndex + 2)..];
-
-
 
             // Case for a simple type
             if (_validSimpleTypeIdentifiers.Contains(firstChar))
             {
                 ParsedMessage message = firstChar switch
                 {
-                    '+' => new ParsedMessage.SimpleStringMessage(stringifiedSlice, slice),
-                    '-' => new ParsedMessage.ErrorMessage(stringifiedSlice, slice),
-                    ':' => new ParsedMessage.IntegerMessage(int.Parse(stringifiedSlice), slice),
+                    '+' => new ParsedMessage.SimpleStringMessage(stringifiedSlice),
+                    '-' => new ParsedMessage.ErrorMessage(stringifiedSlice),
+                    ':' => new ParsedMessage.IntegerMessage(int.Parse(stringifiedSlice)),
                     _ => throw new ArgumentOutOfRangeException(nameof(bytes))
                 };
 
@@ -67,10 +65,10 @@ namespace RedisClone
             //Non - simple type case
 
             // Null bulk string
-            if (slice.Length >= 5 && stringifiedSlice == "-1")
+            if (stringifiedSlice == "-1")
             {
                 return new ParserResponse(
-                    new ParsedMessage.BulkStringMessage(null, slice),
+                    new ParsedMessage.BulkStringMessage(null),
                     remainder);
             }
 
@@ -96,12 +94,12 @@ namespace RedisClone
             if (remainder[bulkStringLength] != '\r' || remainder[bulkStringLength+1] != '\n') return new ParserResponse(null, bytes);
 
             var bulkStringSlice = remainder[..bulkStringLength];
-            var bulkString = Encoding.ASCII.GetString(bulkStringSlice);
+            var rawSlice = bytes[..(bulkStringLength + carriageIndex + 4)];
 
-            var remainingRemainder = remainder[(bulkStringLength+1)..];
+            var remainingRemainder = remainder[(bulkStringLength+2)..];
 
             return new ParserResponse(
-                new ParsedMessage.BulkStringMessage(bulkString, bulkStringSlice),
+                new ParsedMessage.BulkStringMessage(bulkStringSlice),
                 remainingRemainder);
         }
     }
