@@ -39,7 +39,7 @@ public class Tests
     [TestCase("+OK")]
     [TestCase("+")]
     [TestCase("?OK\r\n")]
-    // No prefixed text
+    // No prefixed text -- maybe this should throw error instead
     [TestCase("asdfdsa+BOB\r\nafdsa")]
     public void NullTest(string input)
     {
@@ -90,24 +90,125 @@ public class Tests
     public void ErrorsAreErrors()
     {
         var message = Encoding.ASCII.GetBytes("-Error message\r\n");
-        var parsedMessage = _parser.Parse(message);
-        Assert.That(parsedMessage.ParsedMessage is ParsedMessage.ErrorMessage);
+        var parserResponse = _parser.Parse(message);
+
+        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.ErrorMessage)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.ErrorMessage em)
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.Multiple(() =>
+        {
+            // Check error messages
+            Assert.That(em.Value, Is.EqualTo("Error message"));
+
+            Assert.That(parserResponse.UnparsedRemainder, Is.Empty);
+        });
     }
-    // Check error messages
 
     // Parse Integers
-    [Test]
-    public void IntegersAreIntegers()
+    [TestCase(":42\r\n",42, TestName = "Non-negative number")]
+    [TestCase(":-42\r\n",-42, TestName = "Negative number")]
+    [TestCase(":+42\r\n",+42, TestName = "Definitely positive number")]
+    public void IntegersAreIntegers(string messageString, int expectedValue)
     {
-        var message = Encoding.ASCII.GetBytes(":42\r\n");
-        var parsedMessage = _parser.Parse(message);
-        Assert.That(parsedMessage.ParsedMessage is ParsedMessage.IntegerMessage);
+        var message = Encoding.ASCII.GetBytes(messageString);
+        var parserResponse = _parser.Parse(message);
+        Assert.That(parserResponse.ParsedMessage, Is.InstanceOf(typeof(ParsedMessage.IntegerMessage)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.IntegerMessage im)
+        {
+            Assert.Fail();
+            return;
+        }
+
+
+        Assert.That(im.Value, Is.EqualTo(expectedValue));
     }
 
+    // Parse Bulk Strings (incl. null - "$-1\r\n"), (empty "$0\r\n\r\n") (hello $5\r\nhello\r\n)
+    // ("$$$ Money's great, so are escaped characters \r\n, \" don't you agree?)
+    // [TestCase("$$$ Money's great, so are escaped characters \\r\\n, \" \\ don't you agree?")]
+    // several long, 556 e.g.
+    // check raw that was parsed
+    [TestCase("")]
+    [TestCase("hello")]
+    [TestCase("$hello")]
+    [TestCase("$$$ Money's great, so are escaped characters \\r\\n, \" \\ don't you agree?")]
+    [TestCase("And did those feet, in ancient times, walk upon england's pleasant fields")]
+    public void TestBulkStrings(string bulkString)
+    {
+        var encodedString = $"${bulkString.Length}\r\n{bulkString}\r\n";
+        var message = Encoding.ASCII.GetBytes(encodedString);
+        var parserResponse = _parser.Parse(message);
 
-    // Parse Null Strings
+        if (parserResponse.ParsedMessage is not ParsedMessage.BulkStringMessage bgm)
+        {
+            Assert.Fail();
+            return;
+        }
 
-    // Parse Bulk Strings
+        Assert.That(bgm.Value, Is.EqualTo(bulkString));
+    }
 
-    // Parse Arrays (oooh recursive)
+    // invalid bulk strings
+    [TestCase("$5hello\r\n")]
+    [TestCase("$70hello\r\n")]
+    [TestCase("$70\r\nhello\r\n")]
+    [TestCase("$70\r\nhello")]
+    [TestCase("$5\r\nhello")]
+    [TestCase("$5\r\nhello+OP")]
+    public void TestInvalidBulkStrings(string testString)
+    {
+        var message = Encoding.ASCII.GetBytes(testString);
+        var parserResponse = _parser.Parse(message);
+        // The whole message is unparseable
+        Assert.That(parserResponse.UnparsedRemainder, Is.EquivalentTo(message));
+    }
+
+    // Test null bulk string
+    [Test]
+    public void NullBulkString()
+    {
+        var nullEncoding = Encoding.ASCII.GetBytes("$-1\r\n");
+        var parserResponse = _parser.Parse(nullEncoding);
+
+        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.BulkStringMessage)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.BulkStringMessage bsm)
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.Multiple(() =>
+        {
+            // Check error messages
+            Assert.That(bsm.Value, Is.EqualTo(null));
+
+            Assert.That(parserResponse.UnparsedRemainder, Is.Empty);
+        });
+    }
+
+    // bulk string raw
+
+    // // Parse Arrays (oooh recursive)
+    // [Test]
+    // public void TestArrays()
+    // {
+    //     var encodedString = ""u8;
+    //     var message = Encoding.ASCII.GetBytes(encodedString);
+    //     var parserResponse = _parser.Parse(message);
+    //
+    //     if (parserResponse.ParsedMessage is not ParsedMessage.BulkStringMessage bgm)
+    //     {
+    //         Assert.Fail();
+    //         return;
+    //     }
+    //
+    //     Assert.That(bgm.Value, Is.EqualTo(bulkString));
+    // }
+
+    // Handle a large buffer with multiple messages
+
 }
