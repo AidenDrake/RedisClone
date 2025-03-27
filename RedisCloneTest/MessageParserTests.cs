@@ -59,10 +59,9 @@ public class Tests
     {
         var message = Encoding.ASCII.GetBytes(input);
         var parserResponse = _parser.Parse(message);
-        var expectedByteArray = Encoding.ASCII.GetBytes( $"+{expectedString}\r\n");
         var expectedNonParsedByteArray = Encoding.ASCII.GetBytes(expectedNonParsedString);
 
-        if (parserResponse.ParsedMessage is not ParsedMessage.SimpleStringMessage ssm)
+        if (parserResponse.ParsedMessage is not ParsedMessage.SimpleString ssm)
         {
             Assert.Fail();
             return;
@@ -82,7 +81,7 @@ public class Tests
     {
         var message = Encoding.ASCII.GetBytes("-Error message\r\n");
         var parsedMessage = _parser.Parse(message);
-        Assert.That(parsedMessage.ParsedMessage is not ParsedMessage.SimpleStringMessage);
+        Assert.That(parsedMessage.ParsedMessage is not ParsedMessage.SimpleString);
     }
 
     [Test]
@@ -91,8 +90,8 @@ public class Tests
         var message = Encoding.ASCII.GetBytes("-Error message\r\n");
         var parserResponse = _parser.Parse(message);
 
-        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.ErrorMessage)));
-        if (parserResponse.ParsedMessage is not ParsedMessage.ErrorMessage em)
+        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.Error)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.Error em)
         {
             Assert.Fail();
             return;
@@ -115,8 +114,8 @@ public class Tests
     {
         var message = Encoding.ASCII.GetBytes(messageString);
         var parserResponse = _parser.Parse(message);
-        Assert.That(parserResponse.ParsedMessage, Is.InstanceOf(typeof(ParsedMessage.IntegerMessage)));
-        if (parserResponse.ParsedMessage is not ParsedMessage.IntegerMessage im)
+        Assert.That(parserResponse.ParsedMessage, Is.InstanceOf(typeof(ParsedMessage.Integer)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.Integer im)
         {
             Assert.Fail();
             return;
@@ -142,7 +141,7 @@ public class Tests
         var message = Encoding.ASCII.GetBytes(encodedString);
         var parserResponse = _parser.Parse(message);
 
-        if (parserResponse.ParsedMessage is not ParsedMessage.BulkStringMessage bgm)
+        if (parserResponse.ParsedMessage is not ParsedMessage.BulkString bgm)
         {
             Assert.Fail();
             return;
@@ -175,8 +174,8 @@ public class Tests
         var nullEncoding = "$-1\r\n"u8.ToArray();
         var parserResponse = _parser.Parse(nullEncoding);
 
-        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.BulkStringMessage)));
-        if (parserResponse.ParsedMessage is not ParsedMessage.BulkStringMessage bsm)
+        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.BulkString)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.BulkString bsm)
         {
             Assert.Fail();
             return;
@@ -192,13 +191,30 @@ public class Tests
     }
 
     [Test]
+    public void NullArray()
+    {
+        var nullEncoding = "*-1\r\n"u8.ToArray();
+        var parserResponse = _parser.Parse(nullEncoding);
+
+        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.Array)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.Array am)
+        {
+            Assert.Fail();
+            return;
+        }
+
+        // Check error messages
+        Assert.That(am.Value, Is.EqualTo(null));
+    }
+
+    [Test]
     public void BulkStringRemainder()
     {
-        var stringWithExtra = "$5\r\nhello\r\n"u8.ToArray();
+        var stringWithExtra = "$5\r\nhello\r\n+OK"u8.ToArray();
         var parserResponse = _parser.Parse(stringWithExtra);
 
-        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.BulkStringMessage)));
-        if (parserResponse.ParsedMessage is not ParsedMessage.BulkStringMessage bsm)
+        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.BulkString)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.BulkString bsm)
         {
             Assert.Fail();
             return;
@@ -207,13 +223,11 @@ public class Tests
         Assert.Multiple(() =>
         {
             // Check error messages
-            Assert.That(bsm.Value, Is.EqualTo(null));
-
-            Assert.That(parserResponse.UnparsedRemainder, Is.Empty);
+            Assert.That(bsm.Value, Is.EqualTo("hello"u8.ToArray()));
+            Assert.That(parserResponse.UnparsedRemainder, Is.EqualTo("+OK"u8.ToArray()));
         });
     }
 
-    // bulk string raw
 
     // // Parse Arrays (oooh recursive)
     // [Test]

@@ -53,9 +53,9 @@ namespace RedisClone
             {
                 ParsedMessage message = firstChar switch
                 {
-                    '+' => new ParsedMessage.SimpleStringMessage(stringifiedSlice),
-                    '-' => new ParsedMessage.ErrorMessage(stringifiedSlice),
-                    ':' => new ParsedMessage.IntegerMessage(int.Parse(stringifiedSlice)),
+                    '+' => new ParsedMessage.SimpleString(stringifiedSlice),
+                    '-' => new ParsedMessage.Error(stringifiedSlice),
+                    ':' => new ParsedMessage.Integer(int.Parse(stringifiedSlice)),
                     _ => throw new ArgumentOutOfRangeException(nameof(bytes))
                 };
 
@@ -68,20 +68,19 @@ namespace RedisClone
             if (stringifiedSlice == "-1")
             {
                 return new ParserResponse(
-                    new ParsedMessage.BulkStringMessage(null),
+                    firstChar switch
+                    {
+                        '$' => new ParsedMessage.BulkString(null),
+                        '*' => new ParsedMessage.Array(null),
+                    } ,
                     remainder);
             }
 
-            // if remainder exactly looks like ['$', -1, r, n] ret null
-
-
             // The stringy slice contains the length
-
             if (!int.TryParse(stringifiedSlice, out var bulkStringLength))
             {
                 return new ParserResponse(null, bytes);
             }
-
 
 
             // assert that remainder[length] == \r and remainder[length + 1] == \n
@@ -94,12 +93,11 @@ namespace RedisClone
             if (remainder[bulkStringLength] != '\r' || remainder[bulkStringLength+1] != '\n') return new ParserResponse(null, bytes);
 
             var bulkStringSlice = remainder[..bulkStringLength];
-            var rawSlice = bytes[..(bulkStringLength + carriageIndex + 4)];
 
             var remainingRemainder = remainder[(bulkStringLength+2)..];
 
             return new ParserResponse(
-                new ParsedMessage.BulkStringMessage(bulkStringSlice),
+                new ParsedMessage.BulkString(bulkStringSlice),
                 remainingRemainder);
         }
     }
