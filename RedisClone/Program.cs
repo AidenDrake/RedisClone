@@ -77,24 +77,52 @@ namespace RedisClone
             }
 
             // The stringy slice contains the length
-            if (!int.TryParse(stringifiedSlice, out var bulkStringLength))
+            if (!int.TryParse(stringifiedSlice, out var specifiedLength))
             {
                 return new ParserResponse(null, bytes);
             }
 
+            // Array case
+            if (firstChar == '*')
+            {
+                var parsedArray = new List<ParsedMessage>();
+                var arrayRemainder = remainder[..];
 
+                if (specifiedLength == 0)
+                {
+                    return new ParserResponse(new ParsedMessage.Array(Array.Empty<ParsedMessage>()), remainder[2..]);
+                }
+
+                for (var i = 0; i < specifiedLength; i++)
+                {
+                    var parsedRestOfTheArray = Parse(arrayRemainder);
+                    if (parsedRestOfTheArray.ParsedMessage == null)
+                    {
+                        return new ParserResponse(null, bytes);
+                    }
+                    parsedArray.Add(parsedRestOfTheArray.ParsedMessage);
+                    arrayRemainder = parsedRestOfTheArray.UnparsedRemainder;
+                }
+                // handle rest of the string
+
+                return new ParserResponse(new ParsedMessage.Array(parsedArray.ToArray()) , arrayRemainder);
+
+            }
+
+
+            // BULK STRING CASE
             // assert that remainder[length] == \r and remainder[length + 1] == \n
-            if (remainder.Length < bulkStringLength + 2)
+            if (remainder.Length < specifiedLength + 2)
             {
                 // Unparsable
                 return new ParserResponse(null, bytes);
             }
 
-            if (remainder[bulkStringLength] != '\r' || remainder[bulkStringLength+1] != '\n') return new ParserResponse(null, bytes);
+            if (remainder[specifiedLength] != '\r' || remainder[specifiedLength+1] != '\n') return new ParserResponse(null, bytes);
 
-            var bulkStringSlice = remainder[..bulkStringLength];
+            var bulkStringSlice = remainder[..specifiedLength];
 
-            var remainingRemainder = remainder[(bulkStringLength+2)..];
+            var remainingRemainder = remainder[(specifiedLength+2)..];
 
             return new ParserResponse(
                 new ParsedMessage.BulkString(bulkStringSlice),

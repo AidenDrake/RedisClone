@@ -1,5 +1,8 @@
+using System.Runtime.InteropServices.Marshalling;
 using System.Security.AccessControl;
 using System.Text;
+using FluentAssertions;
+using NUnit.Framework.Internal;
 using RedisClone;
 
 namespace RedisCloneTest;
@@ -228,6 +231,90 @@ public class Tests
         });
     }
 
+    [Test]
+    public void Array()
+    {
+        var testBytes = "*2\r\n$4\r\necho\r\n$11\r\nhello world\r\n+extrastuff"u8.ToArray();
+        var expected = new ParsedMessage[]
+            { new ParsedMessage.BulkString(stba("echo")), new ParsedMessage.BulkString(stba("hello world")) };
+
+        var parserResponse = _parser.Parse(testBytes);
+        var parsedMessage = parserResponse?.ParsedMessage;
+        var unparsed = parserResponse?.UnparsedRemainder;
+        Assert.That(parsedMessage, Is.InstanceOf(typeof(ParsedMessage.Array)));
+        if (parsedMessage is ParsedMessage.Array am)
+        {
+            am.Value.Should().NotBeEmpty();
+            am.Value.Should().BeEquivalentTo(expected, options => options.RespectingRuntimeTypes());
+            unparsed.Should().BeEquivalentTo("+extrastuff"u8.ToArray());
+
+        }
+        else
+        {
+            Assert.Fail();
+        }
+    }
+
+
+    [TestCaseSource(nameof(DivideCases))]
+    public void DivideTest(int n, int d, int q)
+    {
+        Assert.AreEqual(q, n / d);
+    }
+
+    public static object[] DivideCases =
+    {
+        new object[] { 12, 3, 4 },
+        new object[] { 12, 2, 6 },
+        new object[] { 12, 4, 3 }
+    };
+
+    private static TestCaseData[] _arrayInputsSource =
+    {
+        new (
+            "*2\r\n$4\r\necho\r\n$11\r\nhello world\r\n+extrastuff"u8.ToArray(),
+            new ParsedMessage[]
+            {
+                new ParsedMessage.BulkString(stba("echo")) ,
+                new ParsedMessage.BulkString(stba("hello world"))
+            },
+            "+extrastuff"u8.ToArray()
+        ),
+        new (
+            "*0\r\n\r\n+extrastuff"u8.ToArray(),
+            new ParsedMessage[]
+            {
+            },
+            "+extrastuff"u8.ToArray()
+        )
+    };
+
+
+    // [TestCase("*2\r\n$4\r\necho\r\n$11\r\nhello world\r\n+extrastuff"u8.ToArray(), new ParsedMessage[]
+    //     { new ParsedMessage.BulkString(stba("echo")), new ParsedMessage.BulkString(stba("hello world")) }; )]
+    [TestCaseSource(nameof(_arrayInputsSource))]
+    public void ArrayInputs(byte[] test, ParsedMessage[] expectedMessages, byte[] extraStuff)
+    {
+        var parserResponse = _parser.Parse(test);
+        var parsedMessage = parserResponse?.ParsedMessage;
+        var unparsed = parserResponse?.UnparsedRemainder;
+        Assert.That(parsedMessage, Is.InstanceOf(typeof(ParsedMessage.Array)));
+        if (parsedMessage is ParsedMessage.Array am)
+        {
+            am.Value.Should().BeEquivalentTo(expectedMessages, options => options.RespectingRuntimeTypes());
+            unparsed.Should().BeEquivalentTo(extraStuff);
+        }
+        else
+        {
+            Assert.Fail();
+        }
+    }
+
+
+    private static byte[] stba(string inp)
+    {
+        return Encoding.ASCII.GetBytes(inp);
+    }
 
     // // Parse Arrays (oooh recursive)
     // [Test]
