@@ -2,6 +2,7 @@ using System.Text;
 
 namespace RedisClone;
 
+// Stateless class
 public class MessageParser
 {
     public record ParserResponse(ParsedMessage? ParsedMessage, byte[] UnparsedRemainder);
