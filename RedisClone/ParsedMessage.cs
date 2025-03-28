@@ -10,5 +10,5 @@ public record ParsedMessage
 
     public record BulkString(byte[]? Value): ParsedMessage;
 
-    public record Array(ParsedMessage[]? Value) : ParsedMessage;
+    public record ArrayMessage(ParsedMessage[]? Value) : ParsedMessage;
 }

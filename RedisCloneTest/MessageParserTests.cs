@@ -199,8 +199,8 @@ public class Tests
         var nullEncoding = "*-1\r\n"u8.ToArray();
         var parserResponse = _parser.Parse(nullEncoding);
 
-        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.Array)));
-        if (parserResponse.ParsedMessage is not ParsedMessage.Array am)
+        Assert.That(parserResponse.ParsedMessage,Is.InstanceOf(typeof(ParsedMessage.ArrayMessage)));
+        if (parserResponse.ParsedMessage is not ParsedMessage.ArrayMessage am)
         {
             Assert.Fail();
             return;
@@ -241,8 +241,8 @@ public class Tests
         var parserResponse = _parser.Parse(testBytes);
         var parsedMessage = parserResponse?.ParsedMessage;
         var unparsed = parserResponse?.UnparsedRemainder;
-        Assert.That(parsedMessage, Is.InstanceOf(typeof(ParsedMessage.Array)));
-        if (parsedMessage is ParsedMessage.Array am)
+        Assert.That(parsedMessage, Is.InstanceOf(typeof(ParsedMessage.ArrayMessage)));
+        if (parsedMessage is ParsedMessage.ArrayMessage am)
         {
             am.Value.Should().NotBeEmpty();
             am.Value.Should().BeEquivalentTo(expected, options => options.RespectingRuntimeTypes());
@@ -298,8 +298,8 @@ public class Tests
         var parserResponse = _parser.Parse(test);
         var parsedMessage = parserResponse?.ParsedMessage;
         var unparsed = parserResponse?.UnparsedRemainder;
-        Assert.That(parsedMessage, Is.InstanceOf(typeof(ParsedMessage.Array)));
-        if (parsedMessage is ParsedMessage.Array am)
+        Assert.That(parsedMessage, Is.InstanceOf(typeof(ParsedMessage.ArrayMessage)));
+        if (parsedMessage is ParsedMessage.ArrayMessage am)
         {
             am.Value.Should().BeEquivalentTo(expectedMessages, options => options.RespectingRuntimeTypes());
             unparsed.Should().BeEquivalentTo(extraStuff);
