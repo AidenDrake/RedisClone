@@ -12,8 +12,6 @@ listener.Bind(endpoint);
 listener.Listen(100);
 var handler = listener.Accept();
 
-var stream = new NetworkStream(handler, true);
-
 var parser = new MessageParser();
 var buffer = new byte[1024];
 var receivedSoFar = new List<byte>();
@@ -43,23 +41,22 @@ while (true)
     byte[]? send = null;
     if (parsedMessage is ParsedMessage.ArrayMessage am)
     {
-        if (redisStreamReader.ArrayMessageMatches(new []{"COMMAND", "DOCS"}, am))
-        {
-            send = new ParsedMessage.SimpleString("Welcome to Redis Clone").Encode();
-        }
-        if (redisStreamReader.ArrayMessageMatches(new []{"PING"}, am))
-        {
-            send = new ParsedMessage.SimpleString("PONG").Encode();
-        }
-
-        if (am.Value?[0] is ParsedMessage.BulkString bm && Encoding.ASCII.GetString(bm.Value) == "ECHO")
-        {
-            if (am.Value.ElementAtOrDefault(1) is not ParsedMessage.BulkString bs1) throw new Exception("whoops");
-            send = new ParsedMessage.BulkString(bs1.Value ?? Array.Empty<byte>()).Encode();
-        }
+        // if (redisStreamReader.ArrayMessageMatches(new []{"COMMAND", "DOCS"}, am))
+        // {
+        //     send = new ParsedMessage.SimpleString("Welcome to Redis Clone").Encode();
+        // }
+        // if (redisStreamReader.ArrayMessageMatches(new []{"PING"}, am))
+        // {
+        //     send = new ParsedMessage.SimpleString("PONG").Encode();
+        // }
+        //
+        // if (am.Value?[0] is ParsedMessage.BulkString bm && Encoding.ASCII.GetString(bm.Value) == "ECHO")
+        // {
+        //     if (am.Value.ElementAtOrDefault(1) is not ParsedMessage.BulkString bs1) throw new Exception("whoops");
+        //     send = new ParsedMessage.BulkString(bs1.Value ?? Array.Empty<byte>()).Encode();
+        // }
     }
 
-    if (send is null) throw new Exception("oops");
 
     handler.Send(send);
 }

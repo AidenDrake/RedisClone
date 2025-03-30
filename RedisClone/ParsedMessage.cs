@@ -2,9 +2,26 @@ using System.Text;
 
 namespace RedisClone;
 
-public abstract class ParsedMessage
+public abstract class ParsedMessage : IEquatable<ParsedMessage>
 {
     public abstract byte[] Encode();
+
+    public bool Equals(ParsedMessage? pm)
+    {
+        return Encode().SequenceEqual(Encode());
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        return obj.GetType() == typeof(ParsedMessage) && Equals((ParsedMessage)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return this.Encode().GetHashCode();
+    }
 
     public class SimpleString(string Value) : ParsedMessage
     {
