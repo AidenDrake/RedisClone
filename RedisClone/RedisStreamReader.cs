@@ -43,19 +43,5 @@ public class RedisStreamReader
      //     }
      // }
 
-    public bool ArrayMessageMatches(IEnumerable<string> check, ParsedMessage.ArrayMessage am)
-    {
-        if (am.Value is null) return false;
-        var checkArray = check as string[] ?? check.ToArray();
-        if (checkArray.Length != am.Value.Length) return false;
 
-        foreach (var (checkString, pm) in checkArray.Zip(am.Value))
-        {
-            if (pm is not ParsedMessage.BulkString bm) return false;
-            if (bm.Value is null) return false;
-            if (Encoding.ASCII.GetString(bm.Value) != checkString) return false;
-        }
-
-        return true;
-    }
 }

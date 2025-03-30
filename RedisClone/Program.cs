@@ -17,6 +17,7 @@ var buffer = new byte[1024];
 var receivedSoFar = new List<byte>();
 
 var redisStreamReader = new RedisStreamReader();
+var commandHandler = new CommandHandler();
 
 while (true)
 {
@@ -38,25 +39,9 @@ while (true)
     receivedSoFar.Clear();
     receivedSoFar.AddRange(response.UnparsedRemainder);
 
-    byte[]? send = null;
-    if (parsedMessage is ParsedMessage.ArrayMessage am)
-    {
-        // if (redisStreamReader.ArrayMessageMatches(new []{"COMMAND", "DOCS"}, am))
-        // {
-        //     send = new ParsedMessage.SimpleString("Welcome to Redis Clone").Encode();
-        // }
-        // if (redisStreamReader.ArrayMessageMatches(new []{"PING"}, am))
-        // {
-        //     send = new ParsedMessage.SimpleString("PONG").Encode();
-        // }
-        //
-        // if (am.Value?[0] is ParsedMessage.BulkString bm && Encoding.ASCII.GetString(bm.Value) == "ECHO")
-        // {
-        //     if (am.Value.ElementAtOrDefault(1) is not ParsedMessage.BulkString bs1) throw new Exception("whoops");
-        //     send = new ParsedMessage.BulkString(bs1.Value ?? Array.Empty<byte>()).Encode();
-        // }
-    }
+    var pm = commandHandler.HandleCommand(parsedMessage);
 
+    var send = pm.Encode();
 
     handler.Send(send);
 }
