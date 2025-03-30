@@ -16,17 +16,23 @@ var parser = new MessageParser();
 var buffer = new byte[1024];
 var receivedSoFar = new List<byte>();
 
-var redisStreamReader = new RedisStreamReader();
 var commandHandler = new CommandHandler();
+
+var state = new Dictionary<string, string>();
 
 while (true)
 {
 
     var read = handler.Receive(buffer, SocketFlags.None);
 
-    if (read <= 0) continue;
-
     receivedSoFar.AddRange(buffer[..read]);
+
+    if (!receivedSoFar.Any()) continue;
+
+    if (receivedSoFar.Count == 1 && receivedSoFar.Single() == '\n')
+    {
+        receivedSoFar.Clear();
+    }
 
     var response = parser.Parse(receivedSoFar.ToArray());
     var parsedMessage = response.ParsedMessage;
@@ -39,7 +45,7 @@ while (true)
     receivedSoFar.Clear();
     receivedSoFar.AddRange(response.UnparsedRemainder);
 
-    var pm = commandHandler.HandleCommand(parsedMessage);
+    var pm = commandHandler.HandleCommand(parsedMessage, state);
 
     var send = pm.Encode();
 

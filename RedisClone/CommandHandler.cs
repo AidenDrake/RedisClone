@@ -4,7 +4,7 @@ namespace RedisClone;
 
 public class CommandHandler
 {
-    public ParsedMessage HandleCommand(ParsedMessage parsedMessage)
+    public ParsedMessage HandleCommand(ParsedMessage parsedMessage, Dictionary<string, string> state)
     {
         if (parsedMessage is not ParsedMessage.ArrayMessage am)
         {
@@ -17,45 +17,87 @@ public class CommandHandler
             return new ParsedMessage.BulkString(null);
         }
 
-
-        var first = am.Value.First();
-
-        if (first is not ParsedMessage.BulkString bm)
+        var arguments = new List<ParsedMessage.BulkString>();
+        foreach (var message in am.Value)
         {
-            return new ParsedMessage.Error("ERR unknown command");
+            if (message is ParsedMessage.BulkString x)
+            {
+                arguments.Add(x);
+            }
+            else
+            {
+                return new ParsedMessage.Error("ERR unknown command");
+            }
         }
+
+
+        var first = arguments.First();
 
         if (ArrayMessageMatches(new []{"COMMAND", "DOCS"}, am))
         {
             return new ParsedMessage.SimpleString("Welcome to Redis Clone");
         }
-        if (BulkStringMatches("PING", bm))
+        if (BulkStringMatches("PING", first))
         {
-            switch (am.Value.Length)
+            return arguments.Count switch
             {
-                case 1: return new ParsedMessage.SimpleString("PONG");
-                case 2:
-                {
-                    if (am.Value[1] is not ParsedMessage.BulkString bm1)
-                    {
-                        return new ParsedMessage.Error("ERR wrong argument for PING command");
-                    }
-                    return bm1;
-                }
-                default: return new ParsedMessage.Error("ERR wrong number of arguments for PING command");
-            }
+                1 => new ParsedMessage.SimpleString("PONG"),
+                2 => arguments[1],
+                _ => new ParsedMessage.Error("ERR wrong number of arguments for PING command")
+            };
         }
 
-        if ( BulkStringMatches("ECHO", bm))
+        if ( BulkStringMatches("ECHO", first))
         {
-            if (am.Value.ElementAtOrDefault(1) is not ParsedMessage.BulkString bs1)
+            if (arguments.Count != 2)
             {
                 return new ParsedMessage.Error("ERR wrong number of arguments for 'echo' command");
             }
-            return bs1;
+            return arguments[1];
         }
 
-        return new ParsedMessage.Error($"ERR unknown command '{Encoding.ASCII.GetString(bm.Value ?? Array.Empty<byte>())}'");
+        if (BulkStringMatches("SET", first))
+        {
+            if (arguments.Count != 3)
+            {
+                return new ParsedMessage.Error("ERR syntax error");
+            }
+
+            var key = arguments[1];
+            var value = arguments[2];
+
+            if (key.Value is null || value.Value is null)
+            {
+                return new ParsedMessage.Error("ERR syntax error");
+            }
+
+            var keyString = Encoding.ASCII.GetString(key.Value);
+            state[keyString] = Encoding.ASCII.GetString(value.Value);
+
+            return new ParsedMessage.SimpleString("OK");
+        }
+
+        if (BulkStringMatches("GET", first))
+        {
+            if (arguments.Count != 2)
+            {
+                return new ParsedMessage.Error("ERR syntax error");
+            }
+
+            var key = arguments[1];
+
+            if (key.Value is null)
+            {
+                return new ParsedMessage.Error("ERR syntax error");
+            }
+
+            var keyString = Encoding.ASCII.GetString(key.Value);
+            var result = state.GetValueOrDefault(keyString);
+            if (result is null) return new ParsedMessage.BulkString(null);
+            return new ParsedMessage.BulkString(Encoding.ASCII.GetBytes(result));
+        }
+
+        return new ParsedMessage.Error($"ERR unknown command '{Encoding.ASCII.GetString(first.Value ?? Array.Empty<byte>())}'");
 
 
     }
@@ -86,6 +128,6 @@ public class CommandHandler
     {
         if (pm is not ParsedMessage.BulkString bm) return false;
         if (bm.Value is null) return false;
-        return Encoding.ASCII.GetString(bm.Value) == checkString;
+        return string.Equals(Encoding.ASCII.GetString(bm.Value), checkString, StringComparison.InvariantCultureIgnoreCase);
     }
 }
