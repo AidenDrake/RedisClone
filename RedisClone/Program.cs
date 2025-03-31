@@ -2,7 +2,6 @@
 
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using RedisClone;
 
 var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
@@ -10,7 +9,7 @@ listener.Blocking = true;
 var endpoint = new IPEndPoint(IPAddress.Any, 6379);
 listener.Bind(endpoint);
 listener.Listen(100);
-var handler = listener.Accept();
+var handler = await listener.AcceptAsync();
 
 var parser = new MessageParser();
 var buffer = new byte[1024];
@@ -23,15 +22,15 @@ var state = new Dictionary<string, string>();
 while (true)
 {
 
-    var read = handler.Receive(buffer, SocketFlags.None);
+    var read = await handler.ReceiveAsync(buffer, SocketFlags.None);
 
     receivedSoFar.AddRange(buffer[..read]);
 
-    if (!receivedSoFar.Any()) continue;
-
-    if (receivedSoFar.Count == 1 && receivedSoFar.Single() == '\n')
+    switch (receivedSoFar.Count)
     {
-        receivedSoFar.Clear();
+        case 0: continue;
+        case 1 when receivedSoFar.Single() == '\n': receivedSoFar.Clear();
+            break;
     }
 
     var response = parser.Parse(receivedSoFar.ToArray());
@@ -49,7 +48,7 @@ while (true)
 
     var send = pm.Encode();
 
-    handler.Send(send);
+    await handler.SendAsync(send, 0);
 }
 
 //
