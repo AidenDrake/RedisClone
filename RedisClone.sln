@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedisClone", "RedisClone\Re
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedisCloneTest", "RedisCloneTest\RedisCloneTest.csproj", "{2C190009-75F8-4453-8C28-CF2002FEF747}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EchoServer", "EchoServer\EchoServer.csproj", "{C5958966-B447-4A5B-B089-8191EF1F313F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{2C190009-75F8-4453-8C28-CF2002FEF747}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C190009-75F8-4453-8C28-CF2002FEF747}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2C190009-75F8-4453-8C28-CF2002FEF747}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5958966-B447-4A5B-B089-8191EF1F313F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5958966-B447-4A5B-B089-8191EF1F313F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5958966-B447-4A5B-B089-8191EF1F313F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5958966-B447-4A5B-B089-8191EF1F313F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
