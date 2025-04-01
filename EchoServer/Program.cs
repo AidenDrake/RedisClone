@@ -20,28 +20,43 @@ class Program
 
         while (true)
         {
-            var listenerAcceptPromise = listener.AcceptTcpClientAsync().ConfigureAwait(false);
+            var listenerAcceptPromise = listener.AcceptTcpClientAsync(); //.ConfigureAwait(false);
             var client = await listenerAcceptPromise;
             HandleClient(client);
+            // Console.WriteLine("I will write this when a new client connects");
         }
     }
 
     public static async void HandleClient(TcpClient client)
     {
+        Console.WriteLine("new connection");
         var stream = client.GetStream();
 
         var buffer = new byte[1204];
 
-        while (true)
+        try
         {
-            var gotten = await stream.ReadAsync(buffer);
-            if (gotten > 0)
+            while (true)
             {
-                await stream.WriteAsync(buffer, 0, gotten);
+                var gotten = await stream.ReadAsync(buffer);
+                if (gotten > 0)
+                {
+                    await stream.WriteAsync(buffer, 0, gotten);
+                }
             }
         }
-
-        // stream.Close();
-        // client.Close();
+        catch (SocketException se) when (se.SocketErrorCode is SocketError.ConnectionReset)
+        {
+            Console.WriteLine("Connection Reset");
+        }
+        catch (SocketException e)
+        {
+            Console.WriteLine("Socket Exception" + e.Message);
+        }
+        finally
+        {
+            stream.Close();
+            client.Close();
+        }
     }
 }
